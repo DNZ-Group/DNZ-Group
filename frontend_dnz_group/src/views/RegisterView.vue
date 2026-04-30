@@ -41,6 +41,17 @@
         </div>
 
         <div class="field">
+          <label for="city">Ville</label>
+          <input
+            id="city"
+            v-model="form.city"
+            type="text"
+            placeholder="Paris"
+            required
+          />
+        </div>
+
+        <div class="field">
           <label for="password">Mot de passe</label>
           <input
             id="password"
@@ -90,6 +101,7 @@ const form = reactive({
   name: '',
   email: '',
   phone: '',
+  city: '',
   password: '',
   confirm: ''
 })
@@ -100,6 +112,7 @@ function handleRegister() {
     name: form.name,
     email: form.email,
     phone: form.phone,
+    city: form.city,
     password: form.password
   })
   if (ok) {

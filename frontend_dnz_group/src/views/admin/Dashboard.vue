@@ -28,6 +28,9 @@
         <button :class="{ active: tab === 'progress' }" @click="tab = 'progress'">
           <span class="icon">📈</span> Progression
         </button>
+        <button :class="{ active: tab === 'suivi' }" @click="tab = 'suivi'">
+          <span class="icon">🚢</span> Suivi conteneur
+        </button>
       </nav>
       <button class="sidebar-logout" @click="handleLogout">⬅ Déconnexion</button>
     </aside>
@@ -570,7 +573,226 @@
         </div>
 
       </section>
+
+      <!-- ===== SUIVI CONTENEUR ===== -->
+      <section v-if="tab === 'suivi'" class="section">
+
+        <!-- Liste des conteneurs -->
+        <div class="section-actions">
+          <button class="btn-primary" @click="showContainerModal = true">+ Nouveau conteneur</button>
+        </div>
+
+        <div v-if="containers.length === 0" class="empty">Aucun conteneur enregistré.</div>
+
+        <div v-for="c in containers" :key="c.id" class="container-card">
+          <!-- En-tête conteneur -->
+          <div class="container-header">
+            <div class="container-title-row">
+              <span class="container-icon">🚢</span>
+              <div>
+                <div class="container-name">{{ c.name }}</div>
+                <div class="container-sub">Bateau : <strong>{{ c.shipName || '—' }}</strong></div>
+              </div>
+            </div>
+            <div class="container-header-actions">
+              <span :class="['container-status-badge', `cstatus-${c.status}`]">{{ containerStatusLabel(c.status) }}</span>
+              <button class="btn-danger-sm" @click="deleteContainer(c.id)">✕</button>
+            </div>
+          </div>
+
+          <!-- Timeline -->
+          <div class="timeline">
+
+            <!-- Étape 1 : Chargement -->
+            <div :class="['tl-step', { 'tl-step--done': c.loading.endDate }]">
+              <div class="tl-dot"></div>
+              <div class="tl-content">
+                <div class="tl-title">📦 Chargement du conteneur</div>
+                <div class="tl-row">
+                  <span class="tl-label">Début :</span>
+                  <span class="tl-val">{{ c.loading.startDate || '—' }}</span>
+                  <span class="tl-label">Fin :</span>
+                  <span class="tl-val">{{ c.loading.endDate || '—' }}</span>
+                  <span v-if="c.loading.startDate && c.loading.endDate" class="tl-duration">
+                    {{ computeDuration(c.loading.startDate, c.loading.endDate) }}
+                  </span>
+                </div>
+                <div class="tl-row">
+                  <span class="tl-label">Nombre de dépôts clients :</span>
+                  <span class="tl-val">{{ c.deposits.length }}</span>
+                </div>
+                <!-- Historique des dépôts -->
+                <div class="tl-deposits">
+                  <div v-for="(d, di) in c.deposits" :key="di" class="deposit-row">
+                    <span class="deposit-time">{{ d.date }} {{ d.time }}</span>
+                    <span class="deposit-client">👤 {{ d.clientName }}</span>
+                    <span class="deposit-count">{{ d.count }} coli(s)</span>
+                    <button class="btn-icon-xs" @click="removeDeposit(c.id, di)">✕</button>
+                  </div>
+                  <button class="btn-add-deposit" @click="openDepositModal(c.id)">
+                    + Ajouter un dépôt client
+                  </button>
+                </div>
+                <div class="tl-edit-row">
+                  <input v-if="!c.loading.startDate" type="date" v-model="c.loading._startInput" placeholder="Date début" class="tl-input" />
+                  <input v-if="!c.loading.startDate" type="time" v-model="c.loading._startTime" class="tl-input tl-input--sm" />
+                  <button v-if="!c.loading.startDate && c.loading._startInput" class="btn-tl" @click="setLoadingStart(c.id)">Démarrer chargement</button>
+                  <input v-if="c.loading.startDate && !c.loading.endDate" type="date" v-model="c.loading._endInput" class="tl-input" />
+                  <input v-if="c.loading.startDate && !c.loading.endDate" type="time" v-model="c.loading._endTime" class="tl-input tl-input--sm" />
+                  <button v-if="c.loading.startDate && !c.loading.endDate && c.loading._endInput" class="btn-tl btn-tl--green" @click="setLoadingEnd(c.id)">Finaliser chargement</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Étape 2 : Voyage -->
+            <div :class="['tl-step', { 'tl-step--done': c.voyage.arrivalDate }]">
+              <div class="tl-dot"></div>
+              <div class="tl-content">
+                <div class="tl-title">🌊 Voyage en mer</div>
+                <div class="tl-row">
+                  <span class="tl-label">Départ :</span>
+                  <span class="tl-val">{{ c.voyage.departureDate || '—' }}</span>
+                  <span class="tl-label">Arrivée :</span>
+                  <span class="tl-val">{{ c.voyage.arrivalDate || '—' }}</span>
+                  <span v-if="c.voyage.departureDate && c.voyage.arrivalDate" class="tl-duration">
+                    {{ computeDuration(c.voyage.departureDate, c.voyage.arrivalDate) }}
+                  </span>
+                </div>
+                <div v-if="!c.voyage.departureDate || !c.voyage.arrivalDate" class="tl-edit-row">
+                  <input type="text" v-model="c.voyage._shipInput" placeholder="Nom du bateau" class="tl-input" />
+                  <input type="date" v-model="c.voyage._deptInput" placeholder="Départ" class="tl-input" />
+                  <input type="date" v-model="c.voyage._arrInput" placeholder="Arrivée" class="tl-input" />
+                  <button
+                    v-if="c.voyage._shipInput && c.voyage._deptInput && c.voyage._arrInput"
+                    class="btn-tl btn-tl--blue"
+                    @click="setVoyage(c.id)"
+                  >Enregistrer voyage</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Étape 3 : Déchargement -->
+            <div :class="['tl-step', { 'tl-step--done': c.unloading.allPickedUp }]">
+              <div class="tl-dot"></div>
+              <div class="tl-content">
+                <div class="tl-title">📤 Déchargement & retraits clients</div>
+                <div class="tl-row">
+                  <span class="tl-label">Ouverture retrait :</span>
+                  <span class="tl-val">{{ c.unloading.openDate || '—' }}</span>
+                  <span class="tl-label">Dernier retrait :</span>
+                  <span class="tl-val">{{ c.unloading.lastPickupDate || '—' }}</span>
+                  <span v-if="c.unloading.openDate && c.unloading.lastPickupDate" class="tl-duration">
+                    {{ computeDuration(c.unloading.openDate, c.unloading.lastPickupDate) }}
+                  </span>
+                </div>
+                <!-- Suivi des retraits -->
+                <div class="tl-deposits">
+                  <div v-for="(p, pi) in c.unloading.pickups" :key="pi" class="deposit-row">
+                    <span class="deposit-time">{{ p.date }}</span>
+                    <span class="deposit-client">👤 {{ p.clientName }}</span>
+                    <span :class="['pickup-status', p.pickedUp ? 'pickup-done' : 'pickup-pending']">
+                      {{ p.pickedUp ? '✅ Retiré' : '⏳ En attente' }}
+                    </span>
+                    <button v-if="!p.pickedUp" class="btn-tl btn-tl--green btn-tl--xs" @click="markPickedUp(c.id, pi)">Retrait confirmé</button>
+                    <button class="btn-icon-xs" @click="removePickup(c.id, pi)">✕</button>
+                  </div>
+                  <div class="tl-pickup-summary">
+                    <span>✅ {{ c.unloading.pickups.filter(p => p.pickedUp).length }} / {{ c.unloading.pickups.length }} retirés</span>
+                  </div>
+                  <button class="btn-add-deposit" @click="openPickupModal(c.id)">+ Ajouter un retrait client</button>
+                </div>
+                <div v-if="!c.unloading.openDate" class="tl-edit-row">
+                  <input type="date" v-model="c.unloading._openInput" class="tl-input" />
+                  <button v-if="c.unloading._openInput" class="btn-tl btn-tl--blue" @click="setUnloadingOpen(c.id)">Ouvrir les retraits</button>
+                </div>
+                <div v-if="c.unloading.openDate && !c.unloading.allPickedUp" class="tl-edit-row">
+                  <button
+                    v-if="c.unloading.pickups.length > 0 && c.unloading.pickups.every(p => p.pickedUp)"
+                    class="btn-tl btn-tl--green"
+                    @click="closeUnloading(c.id)"
+                  >✓ Clôturer le déchargement</button>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- end timeline -->
+        </div><!-- end container-card -->
+
+      </section>
     </main>
+
+    <!-- Modal: nouveau conteneur -->
+    <div v-if="showContainerModal" class="modal-overlay" @click.self="showContainerModal = false">
+      <div class="modal">
+        <h2>🚢 Nouveau conteneur</h2>
+        <form @submit.prevent="handleAddContainer">
+          <div class="field">
+            <label>Nom / Référence *</label>
+            <input v-model="newContainer.name" type="text" required placeholder="Ex: CNT-2026-01" />
+          </div>
+          <div class="field">
+            <label>Nom du bateau</label>
+            <input v-model="newContainer.shipName" type="text" placeholder="Ex: MSC Flore" />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" @click="showContainerModal = false">Annuler</button>
+            <button type="submit" class="btn-primary">Créer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: dépôt client -->
+    <div v-if="depositModal.open" class="modal-overlay" @click.self="depositModal.open = false">
+      <div class="modal">
+        <h2>📦 Dépôt client</h2>
+        <form @submit.prevent="handleAddDeposit">
+          <div class="field">
+            <label>Nom du client *</label>
+            <input v-model="depositModal.clientName" type="text" required placeholder="Jean Dupont" />
+          </div>
+          <div style="display:flex;gap:0.75rem">
+            <div class="field" style="flex:1">
+              <label>Date *</label>
+              <input v-model="depositModal.date" type="date" required />
+            </div>
+            <div class="field" style="flex:1">
+              <label>Heure</label>
+              <input v-model="depositModal.time" type="time" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Nombre de colis *</label>
+            <input v-model="depositModal.count" type="number" min="1" required placeholder="1" />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" @click="depositModal.open = false">Annuler</button>
+            <button type="submit" class="btn-primary">Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: retrait client -->
+    <div v-if="pickupModal.open" class="modal-overlay" @click.self="pickupModal.open = false">
+      <div class="modal">
+        <h2>📤 Retrait client</h2>
+        <form @submit.prevent="handleAddPickup">
+          <div class="field">
+            <label>Nom du client *</label>
+            <input v-model="pickupModal.clientName" type="text" required placeholder="Jean Dupont" />
+          </div>
+          <div class="field">
+            <label>Date prévue *</label>
+            <input v-model="pickupModal.date" type="date" required />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" @click="pickupModal.open = false">Annuler</button>
+            <button type="submit" class="btn-primary">Ajouter</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <!-- Modal: nouveau conflit -->
     <div v-if="showConflictModal" class="modal-overlay" @click.self="closeConflictModal">
@@ -722,6 +944,7 @@ const tabTitle = computed(() => {
   if (tab.value === 'calendar') return 'Calendrier des transports'
   if (tab.value === 'conflicts') return 'Conflits de transport'
   if (tab.value === 'progress') return 'Progression de l\'entreprise'
+  if (tab.value === 'suivi') return 'Suivi de conteneur'
   return 'Gestion des articles'
 })
 
@@ -1172,6 +1395,150 @@ const prog = computed(() => {
     }
   }
 })
+
+// ---- Suivi Conteneur ----
+const CONTAINERS_KEY = 'dnz_containers'
+
+function loadContainers() {
+  return JSON.parse(localStorage.getItem(CONTAINERS_KEY) || '[]')
+}
+function saveContainers(list) {
+  localStorage.setItem(CONTAINERS_KEY, JSON.stringify(list))
+}
+
+const containers = ref(loadContainers())
+
+function containerStatusLabel(s) {
+  return { pending: 'En préparation', loading: 'Chargement', voyage: 'En mer', unloading: 'Déchargement', done: 'Terminé' }[s] || s
+}
+
+function computeDuration(start, end) {
+  const ms = new Date(end) - new Date(start)
+  if (ms < 0) return ''
+  const days = Math.floor(ms / 86400000)
+  const hours = Math.floor((ms % 86400000) / 3600000)
+  if (days > 0) return `${days}j ${hours}h`
+  return `${hours}h`
+}
+
+// Créer un conteneur
+const showContainerModal = ref(false)
+const newContainer = ref({ name: '', shipName: '' })
+
+function handleAddContainer() {
+  const c = {
+    id: Date.now().toString(),
+    name: newContainer.value.name.trim(),
+    shipName: newContainer.value.shipName.trim(),
+    status: 'pending',
+    loading: { startDate: '', endDate: '', _startInput: '', _startTime: '', _endInput: '', _endTime: '' },
+    deposits: [],
+    voyage: { departureDate: '', arrivalDate: '', _shipInput: newContainer.value.shipName.trim(), _deptInput: '', _arrInput: '' },
+    unloading: { openDate: '', lastPickupDate: '', allPickedUp: false, pickups: [], _openInput: '' }
+  }
+  const list = loadContainers()
+  list.push(c)
+  saveContainers(list)
+  containers.value = list
+  newContainer.value = { name: '', shipName: '' }
+  showContainerModal.value = false
+}
+
+function deleteContainer(id) {
+  const list = loadContainers().filter(c => c.id !== id)
+  saveContainers(list)
+  containers.value = list
+}
+
+function updateContainer(id, updater) {
+  const list = loadContainers()
+  const idx = list.findIndex(c => c.id === id)
+  if (idx === -1) return
+  updater(list[idx])
+  saveContainers(list)
+  containers.value = list
+}
+
+// Chargement
+function setLoadingStart(id) {
+  updateContainer(id, c => {
+    c.loading.startDate = c.loading._startInput + (c.loading._startTime ? ' ' + c.loading._startTime : '')
+    c.status = 'loading'
+  })
+}
+function setLoadingEnd(id) {
+  updateContainer(id, c => {
+    c.loading.endDate = c.loading._endInput + (c.loading._endTime ? ' ' + c.loading._endTime : '')
+  })
+}
+
+// Dépôts
+const depositModal = ref({ open: false, containerId: '', clientName: '', date: '', time: '', count: 1 })
+function openDepositModal(id) {
+  depositModal.value = { open: true, containerId: id, clientName: '', date: '', time: '', count: 1 }
+}
+function handleAddDeposit() {
+  updateContainer(depositModal.value.containerId, c => {
+    c.deposits.push({
+      clientName: depositModal.value.clientName,
+      date: depositModal.value.date,
+      time: depositModal.value.time,
+      count: Number(depositModal.value.count)
+    })
+  })
+  depositModal.value.open = false
+}
+function removeDeposit(id, idx) {
+  updateContainer(id, c => c.deposits.splice(idx, 1))
+}
+
+// Voyage
+function setVoyage(id) {
+  updateContainer(id, c => {
+    c.shipName = c.voyage._shipInput || c.shipName
+    c.voyage.departureDate = c.voyage._deptInput
+    c.voyage.arrivalDate = c.voyage._arrInput
+    c.status = 'voyage'
+  })
+}
+
+// Déchargement
+const pickupModal = ref({ open: false, containerId: '', clientName: '', date: '' })
+function openPickupModal(id) {
+  pickupModal.value = { open: true, containerId: id, clientName: '', date: '' }
+}
+function handleAddPickup() {
+  updateContainer(pickupModal.value.containerId, c => {
+    c.unloading.pickups.push({
+      clientName: pickupModal.value.clientName,
+      date: pickupModal.value.date,
+      pickedUp: false
+    })
+    c.status = 'unloading'
+  })
+  pickupModal.value.open = false
+}
+function removePickup(id, idx) {
+  updateContainer(id, c => c.unloading.pickups.splice(idx, 1))
+}
+function markPickedUp(id, idx) {
+  updateContainer(id, c => {
+    c.unloading.pickups[idx].pickedUp = true
+    c.unloading.lastPickupDate = c.unloading.pickups[idx].date
+  })
+}
+function setUnloadingOpen(id) {
+  updateContainer(id, c => {
+    c.unloading.openDate = c.unloading._openInput
+    c.status = 'unloading'
+  })
+}
+function closeUnloading(id) {
+  updateContainer(id, c => {
+    c.unloading.allPickedUp = true
+    c.status = 'done'
+  })
+}
 
 // ---- Logout ----
 function handleLogout() {
@@ -2299,5 +2666,241 @@ function handleLogout() {
 .metric-unit {
   font-size: 0.75rem;
   color: #94a3b8;
+}
+
+/* ===== SUIVI CONTENEUR ===== */
+.container-card {
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.container-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: #1e293b;
+  color: white;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.container-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.container-icon { font-size: 1.5rem; }
+
+.container-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: white;
+}
+
+.container-sub {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.container-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.container-status-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.cstatus-pending   { background: #334155; color: #94a3b8; }
+.cstatus-loading   { background: #fef3c7; color: #b45309; }
+.cstatus-voyage    { background: #dbeafe; color: #1d4ed8; }
+.cstatus-unloading { background: #ffedd5; color: #c2410c; }
+.cstatus-done      { background: #dcfce7; color: #15803d; }
+
+/* Timeline */
+.timeline {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.tl-step {
+  display: flex;
+  gap: 1rem;
+  padding-bottom: 1.5rem;
+  position: relative;
+}
+
+.tl-step::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 22px;
+  bottom: 0;
+  width: 2px;
+  background: #e2e8f0;
+}
+
+.tl-step:last-child::before { display: none; }
+
+.tl-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  border: 3px solid white;
+  box-shadow: 0 0 0 2px #e2e8f0;
+  flex-shrink: 0;
+  margin-top: 1px;
+  z-index: 1;
+}
+
+.tl-step--done .tl-dot {
+  background: #22c55e;
+  box-shadow: 0 0 0 2px #bbf7d0;
+}
+
+.tl-content { flex: 1; }
+
+.tl-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.tl-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.tl-label { color: #94a3b8; }
+
+.tl-val {
+  color: #334155;
+  font-weight: 600;
+  background: #f8fafc;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.tl-duration {
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.tl-edit-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  align-items: center;
+}
+
+.tl-input {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.tl-input:focus { border-color: #3b82f6; }
+.tl-input--sm { width: 90px; }
+
+.btn-tl {
+  background: #334155;
+  color: white;
+  border: none;
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 0.2s;
+}
+
+.btn-tl:hover { background: #1e293b; }
+.btn-tl--green { background: #22c55e; }
+.btn-tl--green:hover { background: #16a34a; }
+.btn-tl--blue { background: #3b82f6; }
+.btn-tl--blue:hover { background: #2563eb; }
+.btn-tl--xs { padding: 0.2rem 0.5rem; font-size: 0.75rem; }
+
+.tl-deposits {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.deposit-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.82rem;
+  flex-wrap: wrap;
+}
+
+.deposit-time { color: #94a3b8; }
+.deposit-client { color: #334155; font-weight: 600; }
+.deposit-count { color: #475569; }
+
+.btn-add-deposit {
+  background: transparent;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+  padding: 0.3rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 0.2s;
+  align-self: flex-start;
+  margin-top: 0.2rem;
+}
+
+.btn-add-deposit:hover { background: #f1f5f9; }
+
+.btn-icon-xs {
+  background: transparent;
+  border: 1px solid #fca5a5;
+  color: #ef4444;
+  border-radius: 4px;
+  padding: 1px 5px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  margin-left: auto;
+}
+
+.pickup-status { font-size: 0.8rem; font-weight: 600; }
+.pickup-done { color: #22c55e; }
+.pickup-pending { color: #f97316; }
+
+.tl-pickup-summary {
+  font-size: 0.8rem;
+  color: #64748b;
+  padding: 0.25rem 0;
 }
 </style>
