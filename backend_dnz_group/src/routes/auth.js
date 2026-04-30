@@ -20,12 +20,12 @@ router.post('/register', async (req, res) => {
   }
 
   const hashedPassword = await bcrypt.hash(password, 10)
-  const user = { id: uuidv4(), name, email, phone: phone || '', password: hashedPassword }
+  const user = { id: uuidv4(), name, email, phone: phone || '', password: hashedPassword, role: 'user' }
   users.push(user)
   writeData('users', users)
 
   const { password: _, ...safeUser } = user
-  const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' })
+  const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' })
 
   res.status(201).json({ user: safeUser, token })
 })
@@ -50,7 +50,7 @@ router.post('/login', async (req, res) => {
   }
 
   const { password: _, ...safeUser } = user
-  const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' })
+  const token = jwt.sign({ id: user.id, email: user.email, role: user.role || 'user' }, process.env.JWT_SECRET, { expiresIn: '7d' })
 
   res.json({ user: safeUser, token })
 })

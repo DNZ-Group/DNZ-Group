@@ -23,6 +23,7 @@
         </li>
         <li>Nous contacter</li>
         <li v-if="currentUser" class="user-info">
+          <router-link v-if="isAdmin" to="/admin" class="admin-link">⚙️ Dashboard</router-link>
           <span class="user-name">👤 {{ currentUser.name }}</span>
           <button class="btn-logout" @click="handleLogout">Déconnexion</button>
         </li>
@@ -42,7 +43,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { currentUser, logout } from '../auth.js'
+import { currentUser, isAdmin, logout } from '../auth.js'
 
 const router = useRouter()
 const servicesOpen = ref(false)
@@ -102,6 +103,20 @@ nav ul {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.admin-link {
+  background: #2c3e50;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 5px;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.admin-link:hover {
+  background: #1a252f;
 }
 
 .user-name {

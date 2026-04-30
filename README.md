@@ -10,6 +10,63 @@ DNZ-GROUP/
 
 ---
 
+## Panneau d'administration — Dashboard
+
+Le dashboard est accessible uniquement aux comptes de rôle **admin** via la route `/admin`. Il regroupe tous les outils de gestion de la plateforme en un seul endroit.
+
+### Comptes administrateurs
+
+| Nom | E-mail | Mot de passe | Rôle |
+|-----|--------|--------------|------|
+| Administrateur | `admin@dnzgroup.com` | `Admin@2026` | Admin |
+| Admin Test | `admin.test@dnzgroup.com` | `TestAdmin@2026` | Admin |
+| Utilisateur Test | `test@dnzgroup.com` | `test1234` | Utilisateur |
+
+### Onglets du dashboard
+
+#### 📊 Statistiques
+Vue d'ensemble en temps réel : nombre d'utilisateurs, d'articles, de voitures et de cartons enregistrés sur la plateforme. Affiche également la liste des derniers utilisateurs inscrits.
+
+#### 👥 Utilisateurs
+Liste complète de tous les comptes (utilisateurs et admins). Permet de créer un nouveau compte (utilisateur ou administrateur) et de supprimer un compte utilisateur. Les comptes admin ne peuvent pas être supprimés depuis cette interface.
+
+#### 📦 Articles
+Tableau de tous les articles enregistrés sur la plateforme, tous utilisateurs confondus. Chaque article est affiché avec le nom de son propriétaire, son type (voiture ou carton), ses détails et sa date de création. Un admin peut supprimer n'importe quel article.
+
+#### ✉️ Messagerie
+Interface email directement intégrée au dashboard, connectée au compte Yahoo de l'administrateur (`tchindefossomael@yahoo.fr`) via SMTP et IMAP.
+- **Boîte de réception** : liste et lecture des emails reçus, avec possibilité de répondre en un clic.
+- **Envoyés** : historique des emails envoyés depuis le dashboard.
+- **Nouveau message** : formulaire d'envoi d'email vers n'importe quel destinataire.
+
+> **Prérequis** : renseigner un App Password Yahoo dans le fichier `.env` (`MAIL_PASS=...`).
+
+#### 📅 Calendrier
+Calendrier mensuel interactif pour planifier et suivre les dates de transport de colis.
+- Navigation mois par mois.
+- Cliquer sur un jour pour voir les transports prévus ce jour et en ajouter de nouveaux (libellé, heure, description).
+- Liste complète de tous les transports planifiés (passés et à venir) avec statut visuel.
+
+#### ⚠️ Conflits
+
+Registre de tous les incidents et litiges survenus durant les transports.
+
+**Source des données :** les conflits sont détectés et alimentés à partir des **échanges entre les clients et l'administration**, que ce soit via **WhatsApp** ou via la **messagerie email** intégrée au dashboard. Une **intelligence artificielle** analyse et filtre ces conversations pour identifier automatiquement les signaux de conflit (réclamation, colis endommagé, retard, litige, etc.), et propose à l'admin d'enregistrer l'incident correspondant.
+
+Chaque conflit enregistré contient :
+- Le **nom du client** concerné
+- La **date** de l'incident
+- Un **titre / objet** du conflit
+- Une **description** détaillée
+- Un niveau de **gravité** : Faible / Moyenne / Élevée
+- Un **statut** : Ouvert 🔴 ou Résolu ✅
+
+L'admin peut marquer un conflit comme résolu une fois le litige traité. Un badge rouge dans la sidebar indique le nombre de conflits encore ouverts. Les filtres permettent d'afficher tous les conflits, uniquement les ouverts, ou uniquement les résolus.
+
+> **Roadmap IA** : l'intégration de l'IA de filtrage des conversations (WhatsApp Business API + analyse sémantique des emails) est prévue pour alimenter automatiquement ce registre sans saisie manuelle.
+
+---
+
 ## Frontend — `frontend_dnz_group`
 
 Interface web développée avec **Vue 3** et **Vite**.
@@ -21,12 +78,6 @@ Interface web développée avec **Vue 3** et **Vite**.
 - Authentification : connexion et création de compte
 - Espace utilisateur : gestion des articles (voitures et cartons)
 - Formulaire de création d'article avec suggestions de marques/modèles et contenu carton
-
-### Compte de test
-
-| E-mail | Mot de passe |
-|--------|--------------|
-| `test@dnzgroup.com` | `test1234` |
 
 ### Lancer le frontend
 
@@ -56,6 +107,9 @@ API REST développée avec **Node.js** et **Express**. Les données sont stocké
 - Authentification par token JWT (valable 7 jours)
 - CRUD complet des articles par utilisateur connecté
 - Protection de toutes les routes articles par middleware JWT
+- Routes admin protégées par middleware de rôle (`role: 'admin'`)
+- Envoi et lecture d'emails via SMTP/IMAP Yahoo (nodemailer + imapflow)
+- Création automatique du compte admin au démarrage du serveur
 
 ### Routes API
 
@@ -68,16 +122,31 @@ API REST développée avec **Node.js** et **Express**. Les données sont stocké
 | POST | `/api/articles` | JWT | Créer un article |
 | PUT | `/api/articles/:id` | JWT | Modifier un article |
 | DELETE | `/api/articles/:id` | JWT | Supprimer un article |
+| GET | `/api/admin/stats` | Admin | Statistiques globales |
+| GET | `/api/admin/users` | Admin | Liste des utilisateurs |
+| POST | `/api/admin/users` | Admin | Créer un utilisateur/admin |
+| DELETE | `/api/admin/users/:id` | Admin | Supprimer un utilisateur |
+| GET | `/api/admin/articles` | Admin | Tous les articles |
+| DELETE | `/api/admin/articles/:id` | Admin | Supprimer un article |
+| POST | `/api/admin/email/send` | Admin | Envoyer un email |
+| GET | `/api/admin/email/inbox` | Admin | Lire la boîte de réception |
+| GET | `/api/admin/email/sent` | Admin | Lire les emails envoyés |
 
 ### Configuration
 
-Créer un fichier `.env` dans `backend_dnz_group/` :
+Fichier `.env` dans `backend_dnz_group/` :
 
 ```env
 PORT=3000
 JWT_SECRET=votre_secret_jwt
 FRONTEND_URL=http://localhost:5173
+
+# Yahoo Mail (App Password requis)
+MAIL_USER=tchindefossomael@yahoo.fr
+MAIL_PASS=votre_app_password_yahoo
 ```
+
+> Générer un App Password Yahoo : https://login.yahoo.com/myaccount/security/app-passwords
 
 ### Lancer le backend
 
@@ -115,4 +184,7 @@ cd frontend_dnz_group && npm run dev
 |------|-------------|
 | Frontend | Vue 3, Vite, Vue Router |
 | Backend | Node.js, Express, JWT, bcryptjs |
-| Stockage | Fichiers JSON (localStorage côté client) |
+| Email | Nodemailer (SMTP), ImapFlow (IMAP), Yahoo Mail |
+| Stockage | Fichiers JSON (backend) + localStorage (frontend) |
+| Sécurité | JWT, bcrypt, middleware de rôle admin |
+| IA (roadmap) | Filtrage automatique des conflits via conversations WhatsApp/email |
