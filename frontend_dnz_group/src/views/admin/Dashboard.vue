@@ -510,6 +510,57 @@
         </div>
 
         <!-- Méthodes de croissance -->
+        <div class="prog-row">
+
+          <!-- Top villes clients -->
+          <div class="prog-card">
+            <h3>📍 Villes des clients (top {{ prog.topCitiesData.length }})</h3>
+            <div v-if="prog.topCitiesData.length === 0" class="prog-empty">Aucune ville renseignée.</div>
+            <div class="prog-bars" v-else>
+              <div v-for="c in prog.topCitiesData" :key="c.city" class="prog-bar-row">
+                <span class="prog-bar-label prog-bar-label--lg">{{ c.city }}</span>
+                <div class="prog-bar-track">
+                  <div class="prog-bar-fill" style="background:#6366f1" :style="{ width: c.pct + '%' }"></div>
+                </div>
+                <span class="prog-bar-count">{{ c.count }} <span class="prog-bar-pct">({{ c.sharePct }}%)</span></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Top marques de voitures -->
+          <div class="prog-card">
+            <h3>🚗 Marques de voitures les plus transportées</h3>
+            <div v-if="prog.topMarquesData.length === 0" class="prog-empty">Aucune voiture enregistrée.</div>
+            <div class="prog-bars" v-else>
+              <div v-for="m in prog.topMarquesData" :key="m.marque" class="prog-bar-row">
+                <span class="prog-bar-label prog-bar-label--lg">{{ m.marque }}</span>
+                <div class="prog-bar-track">
+                  <div class="prog-bar-fill" style="background:#f59e0b" :style="{ width: m.pct + '%' }"></div>
+                </div>
+                <span class="prog-bar-count">{{ m.count }}</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Contenu des cartons -->
+        <div class="prog-card prog-card--full">
+          <h3>📦 Contenu des cartons le plus transporté</h3>
+          <div v-if="prog.topContenuData.length === 0" class="prog-empty">Aucun carton avec contenu renseigné.</div>
+          <div v-else class="prog-contenu-grid">
+            <div v-for="(item, i) in prog.topContenuData" :key="item.item" class="prog-contenu-item">
+              <div class="prog-contenu-rank">#{{ i + 1 }}</div>
+              <div class="prog-contenu-label">{{ item.item }}</div>
+              <div class="prog-contenu-bar-wrap">
+                <div class="prog-contenu-bar" :style="{ width: item.pct + '%' }"></div>
+              </div>
+              <div class="prog-contenu-count">{{ item.count }}x</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Méthodes de croissance -->
         <div class="prog-card prog-card--full">
           <h3>&#127919; Méthodes de croissance utilisées</h3>
           <div class="prog-methods-grid">
@@ -1472,6 +1523,57 @@ const prog = computed(() => {
   const high = conflictList.filter(c => c.severity === 'high').length
   const maxSev = Math.max(low, medium, high, 1)
 
+  // Villes des clients (top 8)
+  const cityMap = {}
+  users.forEach(u => {
+    const c = (u.city || '').trim()
+    if (c) cityMap[c] = (cityMap[c] || 0) + 1
+  })
+  const topCities = Object.entries(cityMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+  const maxCityCount = Math.max(...topCities.map(([, n]) => n), 1)
+  const topCitiesData = topCities.map(([city, count]) => ({
+    city,
+    count,
+    pct: Math.round((count / maxCityCount) * 100),
+    sharePct: Math.round((count / Math.max(totalUsers, 1)) * 100)
+  }))
+
+  // Top marques de voiture (top 6)
+  const marqueMap = {}
+  allArts.filter(a => a.type === 'voiture').forEach(a => {
+    const m = (a.marque || '').trim()
+    if (m) marqueMap[m] = (marqueMap[m] || 0) + 1
+  })
+  const topMarques = Object.entries(marqueMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+  const maxMarqueCount = Math.max(...topMarques.map(([, n]) => n), 1)
+  const topMarquesData = topMarques.map(([marque, count]) => ({
+    marque,
+    count,
+    pct: Math.round((count / maxMarqueCount) * 100)
+  }))
+
+  // Top contenu des cartons (top 6)
+  const contenuMap = {}
+  allArts.filter(a => a.type === 'carton').forEach(a => {
+    ;(a.contenu || []).forEach(item => {
+      const k = (item || '').trim()
+      if (k) contenuMap[k] = (contenuMap[k] || 0) + 1
+    })
+  })
+  const topContenu = Object.entries(contenuMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+  const maxContenuCount = Math.max(...topContenu.map(([, n]) => n), 1)
+  const topContenuData = topContenu.map(([item, count]) => ({
+    item,
+    count,
+    pct: Math.round((count / maxContenuCount) * 100)
+  }))
+
   return {
     totalUsers, totalArticles, voitures, cartons, voituresPct,
     totalTransports, transportsByMonth,
@@ -1482,7 +1584,8 @@ const prog = computed(() => {
       low: Math.round((low / maxSev) * 100),
       medium: Math.round((medium / maxSev) * 100),
       high: Math.round((high / maxSev) * 100)
-    }
+    },
+    topCitiesData, topMarquesData, topContenuData
   }
 })
 
@@ -2619,6 +2722,92 @@ function handleLogout() {
   flex-shrink: 0;
 }
 
+.prog-bar-label--lg {
+  width: 90px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prog-bar-count {
+  width: 24px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #334155;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.prog-bar-pct {
+  font-weight: 400;
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.prog-empty {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  padding: 1rem 0;
+}
+
+/* Contenu cartons grid */
+.prog-contenu-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 0.5rem;
+}
+
+.prog-contenu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.prog-contenu-rank {
+  width: 28px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.prog-contenu-label {
+  width: 130px;
+  font-size: 0.83rem;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.prog-contenu-bar-wrap {
+  flex: 1;
+  background: #f1f5f9;
+  border-radius: 20px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.prog-contenu-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #f97316, #fbbf24);
+  border-radius: 20px;
+  transition: width 0.6s ease;
+  min-width: 4px;
+}
+
+.prog-contenu-count {
+  width: 30px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #334155;
+  text-align: right;
+  flex-shrink: 0;
+}
+
 .prog-bar-track {
   flex: 1;
   background: #f1f5f9;
@@ -2632,14 +2821,6 @@ function handleLogout() {
   border-radius: 20px;
   transition: width 0.6s ease;
   min-width: 4px;
-}
-
-.prog-bar-count {
-  width: 24px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #334155;
-  text-align: right;
 }
 
 .prog-conflict-summary {
