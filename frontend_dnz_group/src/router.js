@@ -8,7 +8,7 @@ import AdminDashboard from './views/admin/Dashboard.vue'
 import { currentUser } from './auth.js'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', component: HomeView },
     { path: '/services/transport-voiture', component: TransportVoitureView },
