@@ -65,6 +65,41 @@ L'admin peut marquer un conflit comme résolu une fois le litige traité. Un bad
 
 > **Roadmap IA** : l'intégration de l'IA de filtrage des conversations (WhatsApp Business API + analyse sémantique des emails) est prévue pour alimenter automatiquement ce registre sans saisie manuelle.
 
+#### 📈 Progression
+
+Tableau de bord analytique avec KPIs et graphiques pour mesurer la croissance de l'activité.
+
+**KPIs principaux :**
+- Clients enregistrés (base utilisateurs totale)
+- Articles transportés (voitures + colis)
+- Transports planifiés (total agenda)
+- Taux de résolution des conflits (%)
+
+**Graphiques et classements :**
+- **Répartition voitures / cartons** : donut chart avec pourcentages.
+- **Conflits par gravité** : barres horizontales (Faible / Moyenne / Élevée).
+- **Transports par mois** : histogramme des 12 derniers mois (mois courant mis en valeur).
+- **Villes des clients (top 8)** : classement des villes les plus représentées dans la base client, avec barre proportionnelle et pourcentage de la base totale.
+- **Marques de voitures les plus transportées (top 6)** : classement des marques automobiles par fréquence de transport.
+- **Contenu des cartons le plus transporté (top 6)** : classement des articles les plus déclarés dans les cartons (vêtements, électronique, etc.).
+
+**Méthodes de croissance :** 6 indicateurs qualitatifs (acquisition client, volume d'activité, planification, qualité de service, communication client, analyse des données).
+
+#### 🚢 Suivi conteneur
+
+Suivi complet du cycle de vie des conteneurs maritimes, de la collecte des colis jusqu'à la livraison finale.
+
+L'onglet est divisé en deux vues :
+
+**🚢 En cours** — liste des conteneurs actifs avec leur timeline en 3 étapes :
+1. **Chargement** : dates de début/fin, liste des dépôts clients (nom, date, heure, nombre de colis).
+2. **Voyage** : nom du bateau, date de départ, date d'arrivée.
+3. **Déchargement** : date d'ouverture, liste des retraits clients (nom, date, statut retiré/non retiré), indicateur de clôture.
+
+Chaque étape peut être mise à jour indépendamment. Le statut du conteneur avance automatiquement : En préparation → Chargement → En mer → Déchargement → Terminé.
+
+**📚 Historique** — archive des conteneurs terminés, consultable à tout moment. Chaque fiche d'historique affiche un résumé compact des 3 étapes (dates, durées calculées, nombre de dépôts/retraits) sans possibilité de modification.
+
 ---
 
 ## Frontend — `frontend_dnz_group`
