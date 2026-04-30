@@ -577,14 +577,25 @@
       <!-- ===== SUIVI CONTENEUR ===== -->
       <section v-if="tab === 'suivi'" class="section">
 
-        <!-- Liste des conteneurs -->
+        <!-- Barre actions + filtre -->
         <div class="section-actions">
+          <div class="conflict-filters">
+            <button :class="['filter-btn', { active: containerView === 'active' }]" @click="containerView = 'active'">
+              🚢 En cours
+              <span v-if="activeContainers.length > 0" class="unread-badge" style="background:#3b82f6">{{ activeContainers.length }}</span>
+            </button>
+            <button :class="['filter-btn', { active: containerView === 'history' }]" @click="containerView = 'history'">
+              📚 Historique
+              <span v-if="doneContainers.length > 0" class="unread-badge" style="background:#22c55e">{{ doneContainers.length }}</span>
+            </button>
+          </div>
           <button class="btn-primary" @click="showContainerModal = true">+ Nouveau conteneur</button>
         </div>
 
-        <div v-if="containers.length === 0" class="empty">Aucun conteneur enregistré.</div>
-
-        <div v-for="c in containers" :key="c.id" class="container-card">
+        <!-- VUE : Conteneurs actifs -->
+        <template v-if="containerView === 'active'">
+          <div v-if="activeContainers.length === 0" class="empty">Aucun conteneur actif. Créez-en un nouveau.</div>
+          <div v-for="c in activeContainers" :key="c.id" class="container-card">
           <!-- En-tête conteneur -->
           <div class="container-header">
             <div class="container-title-row">
@@ -717,6 +728,85 @@
 
           </div><!-- end timeline -->
         </div><!-- end container-card -->
+        </template>
+
+        <!-- VUE : Historique -->
+        <template v-if="containerView === 'history'">
+          <div v-if="doneContainers.length === 0" class="empty">Aucun conteneur terminé dans l'historique.</div>
+          <div v-for="c in doneContainers" :key="c.id" class="container-card container-card--archived">
+            <!-- En-tête -->
+            <div class="container-header" style="background:#334155">
+              <div class="container-title-row">
+                <span class="container-icon">🚢</span>
+                <div>
+                  <div class="container-name">{{ c.name }}</div>
+                  <div class="container-sub">Bateau : <strong>{{ c.shipName || '—' }}</strong></div>
+                </div>
+              </div>
+              <div class="container-header-actions">
+                <span class="container-status-badge cstatus-done">✅ Terminé</span>
+                <button class="btn-danger-sm" @click="deleteContainer(c.id)">✕</button>
+              </div>
+            </div>
+
+            <!-- Résumé historique -->
+            <div class="history-summary">
+              <!-- Chargement -->
+              <div class="history-block">
+                <div class="history-block-title">📦 Chargement</div>
+                <div class="history-row"><span class="tl-label">Début :</span> <span class="tl-val">{{ c.loading.startDate || '—' }}</span></div>
+                <div class="history-row"><span class="tl-label">Fin :</span> <span class="tl-val">{{ c.loading.endDate || '—' }}</span></div>
+                <div v-if="c.loading.startDate && c.loading.endDate" class="history-row">
+                  <span class="tl-label">Durée :</span>
+                  <span class="tl-duration">{{ computeDuration(c.loading.startDate, c.loading.endDate) }}</span>
+                </div>
+                <div class="history-row"><span class="tl-label">Dépôts clients :</span> <span class="tl-val">{{ c.deposits.length }}</span></div>
+                <div v-if="c.deposits.length > 0" class="history-deposits">
+                  <div v-for="(d, i) in c.deposits" :key="i" class="deposit-row">
+                    <span class="deposit-time">{{ d.date }} {{ d.time }}</span>
+                    <span class="deposit-client">👤 {{ d.clientName }}</span>
+                    <span class="deposit-count">{{ d.count }} coli(s)</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Voyage -->
+              <div class="history-block">
+                <div class="history-block-title">🌊 Voyage</div>
+                <div class="history-row"><span class="tl-label">Départ :</span> <span class="tl-val">{{ c.voyage.departureDate || '—' }}</span></div>
+                <div class="history-row"><span class="tl-label">Arrivée :</span> <span class="tl-val">{{ c.voyage.arrivalDate || '—' }}</span></div>
+                <div v-if="c.voyage.departureDate && c.voyage.arrivalDate" class="history-row">
+                  <span class="tl-label">Durée :</span>
+                  <span class="tl-duration">{{ computeDuration(c.voyage.departureDate, c.voyage.arrivalDate) }}</span>
+                </div>
+              </div>
+
+              <!-- Déchargement -->
+              <div class="history-block">
+                <div class="history-block-title">📤 Déchargement</div>
+                <div class="history-row"><span class="tl-label">Ouverture :</span> <span class="tl-val">{{ c.unloading.openDate || '—' }}</span></div>
+                <div class="history-row"><span class="tl-label">Dernier retrait :</span> <span class="tl-val">{{ c.unloading.lastPickupDate || '—' }}</span></div>
+                <div v-if="c.unloading.openDate && c.unloading.lastPickupDate" class="history-row">
+                  <span class="tl-label">Durée :</span>
+                  <span class="tl-duration">{{ computeDuration(c.unloading.openDate, c.unloading.lastPickupDate) }}</span>
+                </div>
+                <div class="history-row">
+                  <span class="tl-label">Clients :</span>
+                  <span class="tl-val">✅ {{ c.unloading.pickups.filter(p => p.pickedUp).length }} / {{ c.unloading.pickups.length }} retirés</span>
+                </div>
+                <div v-if="c.unloading.pickups.length > 0" class="history-deposits">
+                  <div v-for="(p, i) in c.unloading.pickups" :key="i" class="deposit-row">
+                    <span class="deposit-time">{{ p.date }}</span>
+                    <span class="deposit-client">👤 {{ p.clientName }}</span>
+                    <span :class="['pickup-status', p.pickedUp ? 'pickup-done' : 'pickup-pending']">
+                      {{ p.pickedUp ? '✅ Retiré' : '⏳ Non retiré' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
 
       </section>
     </main>
@@ -1407,6 +1497,10 @@ function saveContainers(list) {
 }
 
 const containers = ref(loadContainers())
+const containerView = ref('active')
+
+const activeContainers = computed(() => containers.value.filter(c => c.status !== 'done'))
+const doneContainers = computed(() => containers.value.filter(c => c.status === 'done'))
 
 function containerStatusLabel(s) {
   return { pending: 'En préparation', loading: 'Chargement', voyage: 'En mer', unloading: 'Déchargement', done: 'Terminé' }[s] || s
@@ -2902,5 +2996,49 @@ function handleLogout() {
   font-size: 0.8rem;
   color: #64748b;
   padding: 0.25rem 0;
+}
+
+/* Historique conteneurs */
+.container-card--archived { opacity: 0.92; }
+
+.history-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.history-block {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.history-block-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 0.35rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  flex-wrap: wrap;
+}
+
+.history-deposits {
+  margin-top: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 </style>
