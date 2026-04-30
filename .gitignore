@@ -1,0 +1,16 @@
+# Dépendances
+frontend_dnz_group/node_modules/
+backend_dnz_group/node_modules/
+
+# Variables d'environnement
+backend_dnz_group/.env
+
+# Données JSON (générées à l'exécution)
+backend_dnz_group/src/data/*.json
+
+# Build
+frontend_dnz_group/dist/
+
+# Logs
+*.log
+npm-debug.log*
