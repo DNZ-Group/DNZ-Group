@@ -25,6 +25,9 @@
           <span class="icon">⚠️</span> Conflits
           <span v-if="openConflicts > 0" class="unread-badge">{{ openConflicts }}</span>
         </button>
+        <button :class="{ active: tab === 'progress' }" @click="tab = 'progress'">
+          <span class="icon">📈</span> Progression
+        </button>
       </nav>
       <button class="sidebar-logout" @click="handleLogout">⬅ Déconnexion</button>
     </aside>
@@ -376,6 +379,197 @@
           </div>
         </div>
       </section>
+
+      <!-- ===== PROGRESSION ===== -->
+      <section v-if="tab === 'progress'" class="section">
+
+        <!-- KPIs principaux -->
+        <div class="prog-kpi-grid">
+          <div class="prog-kpi">
+            <div class="prog-kpi-icon" style="background:#dbeafe">&#128101;</div>
+            <div class="prog-kpi-body">
+              <div class="prog-kpi-value">{{ prog.totalUsers }}</div>
+              <div class="prog-kpi-label">Clients enregistrés</div>
+              <div class="prog-kpi-sub">Croissance de la base client</div>
+            </div>
+          </div>
+          <div class="prog-kpi">
+            <div class="prog-kpi-icon" style="background:#dcfce7">&#128230;</div>
+            <div class="prog-kpi-body">
+              <div class="prog-kpi-value">{{ prog.totalArticles }}</div>
+              <div class="prog-kpi-label">Articles transportés</div>
+              <div class="prog-kpi-sub">Voitures + Colis</div>
+            </div>
+          </div>
+          <div class="prog-kpi">
+            <div class="prog-kpi-icon" style="background:#fef3c7">&#128197;</div>
+            <div class="prog-kpi-body">
+              <div class="prog-kpi-value">{{ prog.totalTransports }}</div>
+              <div class="prog-kpi-label">Transports planifiés</div>
+              <div class="prog-kpi-sub">Total agenda</div>
+            </div>
+          </div>
+          <div class="prog-kpi">
+            <div class="prog-kpi-icon" style="background:#fee2e2">&#9888;&#65039;</div>
+            <div class="prog-kpi-body">
+              <div class="prog-kpi-value">{{ prog.conflictResolutionRate }}%</div>
+              <div class="prog-kpi-label">Taux de résolution</div>
+              <div class="prog-kpi-sub">Conflits résolus / total</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Répartition articles -->
+        <div class="prog-row">
+          <div class="prog-card">
+            <h3>&#128230; Répartition des articles</h3>
+            <div class="prog-donut-wrapper">
+              <svg viewBox="0 0 36 36" class="prog-donut">
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e2e8f0" stroke-width="3"/>
+                <circle
+                  cx="18" cy="18" r="15.9" fill="none"
+                  stroke="#3b82f6" stroke-width="3"
+                  stroke-dasharray="100" stroke-dashoffset="0"
+                  :stroke-dasharray="`${prog.voituresPct} ${100 - prog.voituresPct}`"
+                  stroke-linecap="round"
+                  transform="rotate(-90 18 18)"
+                />
+              </svg>
+              <div class="prog-donut-legend">
+                <div class="legend-item"><span class="legend-dot" style="background:#3b82f6"></span> Voitures <strong>{{ prog.voitures }}</strong> ({{ prog.voituresPct }}%)</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#e2e8f0"></span> Cartons <strong>{{ prog.cartons }}</strong> ({{ 100 - prog.voituresPct }}%)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Conflits par gravité -->
+          <div class="prog-card">
+            <h3>&#9888;&#65039; Conflits par gravité</h3>
+            <div class="prog-bars">
+              <div class="prog-bar-row">
+                <span class="prog-bar-label">Faible</span>
+                <div class="prog-bar-track">
+                  <div class="prog-bar-fill" style="background:#22c55e" :style="{ width: prog.conflictBars.low + '%' }"></div>
+                </div>
+                <span class="prog-bar-count">{{ prog.conflictCounts.low }}</span>
+              </div>
+              <div class="prog-bar-row">
+                <span class="prog-bar-label">Moyenne</span>
+                <div class="prog-bar-track">
+                  <div class="prog-bar-fill" style="background:#f97316" :style="{ width: prog.conflictBars.medium + '%' }"></div>
+                </div>
+                <span class="prog-bar-count">{{ prog.conflictCounts.medium }}</span>
+              </div>
+              <div class="prog-bar-row">
+                <span class="prog-bar-label">Élevée</span>
+                <div class="prog-bar-track">
+                  <div class="prog-bar-fill" style="background:#ef4444" :style="{ width: prog.conflictBars.high + '%' }"></div>
+                </div>
+                <span class="prog-bar-count">{{ prog.conflictCounts.high }}</span>
+              </div>
+            </div>
+            <div class="prog-conflict-summary">
+              <div class="prog-mini-stat">
+                <span class="mini-val">{{ prog.totalConflicts }}</span>
+                <span class="mini-lbl">Total conflits</span>
+              </div>
+              <div class="prog-mini-stat">
+                <span class="mini-val" style="color:#22c55e">{{ prog.resolvedConflicts }}</span>
+                <span class="mini-lbl">Résolus</span>
+              </div>
+              <div class="prog-mini-stat">
+                <span class="mini-val" style="color:#ef4444">{{ prog.openConflicts }}</span>
+                <span class="mini-lbl">Ouverts</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activité transports par mois -->
+        <div class="prog-card prog-card--full">
+          <h3>&#128197; Transports planifiés par mois (12 derniers mois)</h3>
+          <div class="prog-chart">
+            <div
+              v-for="(m, i) in prog.transportsByMonth"
+              :key="i"
+              class="prog-chart-col"
+            >
+              <div class="prog-chart-bar-wrap">
+                <div
+                  class="prog-chart-bar"
+                  :style="{ height: m.heightPct + '%', background: m.isCurrentMonth ? '#3b82f6' : '#93c5fd' }"
+                  :title="m.count + ' transport(s)'"
+                ></div>
+              </div>
+              <div class="prog-chart-label">{{ m.label }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Méthodes de croissance -->
+        <div class="prog-card prog-card--full">
+          <h3>&#127919; Méthodes de croissance utilisées</h3>
+          <div class="prog-methods-grid">
+            <div class="prog-method">
+              <div class="prog-method-icon">&#128101;</div>
+              <div class="prog-method-title">Acquisition client</div>
+              <div class="prog-method-desc">Suivi du nombre de nouveaux comptes créés sur la plateforme. Indicateur principal de la croissance de la base client.</div>
+              <div class="prog-method-metric">
+                <span class="metric-val">{{ prog.totalUsers }}</span>
+                <span class="metric-unit">clients</span>
+              </div>
+            </div>
+            <div class="prog-method">
+              <div class="prog-method-icon">&#128230;</div>
+              <div class="prog-method-title">Volume d'activité</div>
+              <div class="prog-method-desc">Nombre total d’articles (voitures + colis) enregistrés. Mesure directe du volume de transport traité.</div>
+              <div class="prog-method-metric">
+                <span class="metric-val">{{ prog.totalArticles }}</span>
+                <span class="metric-unit">articles</span>
+              </div>
+            </div>
+            <div class="prog-method">
+              <div class="prog-method-icon">&#128197;</div>
+              <div class="prog-method-title">Planification</div>
+              <div class="prog-method-desc">Transports planifiés dans le calendrier. Révèle la capacité d’organisation et d’anticipation opérationnelle.</div>
+              <div class="prog-method-metric">
+                <span class="metric-val">{{ prog.totalTransports }}</span>
+                <span class="metric-unit">transports</span>
+              </div>
+            </div>
+            <div class="prog-method">
+              <div class="prog-method-icon">&#10003;</div>
+              <div class="prog-method-title">Qualité de service</div>
+              <div class="prog-method-desc">Taux de résolution des conflits. Un taux élevé indique une bonne gestion des incidents et une satisfaction client accrue.</div>
+              <div class="prog-method-metric">
+                <span class="metric-val" :style="{ color: prog.conflictResolutionRate >= 80 ? '#22c55e' : prog.conflictResolutionRate >= 50 ? '#f97316' : '#ef4444' }">
+                  {{ prog.conflictResolutionRate }}%
+                </span>
+                <span class="metric-unit">résolution</span>
+              </div>
+            </div>
+            <div class="prog-method">
+              <div class="prog-method-icon">&#128172;</div>
+              <div class="prog-method-title">Communication client</div>
+              <div class="prog-method-desc">Messagerie email intégrée et détection IA des conflits via WhatsApp/email. Améliore la réactivité et la relation client.</div>
+              <div class="prog-method-metric">
+                <span class="metric-val">IA</span>
+                <span class="metric-unit">filtrage actif</span>
+              </div>
+            </div>
+            <div class="prog-method">
+              <div class="prog-method-icon">&#128202;</div>
+              <div class="prog-method-title">Analyse des données</div>
+              <div class="prog-method-desc">Tableau de bord centralisé avec KPIs en temps réel. Permet des décisions basées sur les données plutôt que l’intuition.</div>
+              <div class="prog-method-metric">
+                <span class="metric-val">6</span>
+                <span class="metric-unit">indicateurs</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
     </main>
 
     <!-- Modal: nouveau conflit -->
@@ -527,6 +721,7 @@ const tabTitle = computed(() => {
   if (tab.value === 'email') return 'Messagerie'
   if (tab.value === 'calendar') return 'Calendrier des transports'
   if (tab.value === 'conflicts') return 'Conflits de transport'
+  if (tab.value === 'progress') return 'Progression de l\'entreprise'
   return 'Gestion des articles'
 })
 
@@ -912,6 +1107,71 @@ function deleteConflict(id) {
   saveConflicts(list)
   conflicts.value = list
 }
+
+// ---- Progression ----
+const prog = computed(() => {
+  const users = getAllUsers().filter(u => u.role !== 'admin')
+  const totalUsers = users.length
+
+  // Articles
+  const allArts = []
+  users.forEach(u => {
+    const key = `dnz_articles_${u.email}`
+    const arts = JSON.parse(localStorage.getItem(key) || '[]')
+    allArts.push(...arts)
+  })
+  const totalArticles = allArts.length
+  const voitures = allArts.filter(a => a.type === 'voiture').length
+  const cartons = allArts.filter(a => a.type === 'carton').length
+  const voituresPct = totalArticles > 0 ? Math.round((voitures / totalArticles) * 100) : 0
+
+  // Transports
+  const events = loadEvents()
+  const totalTransports = events.length
+
+  // Transports par mois (12 derniers mois)
+  const now = new Date()
+  const transportsByMonth = []
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const prefix = `${y}-${m}`
+    const count = events.filter(e => e.date && e.date.startsWith(prefix)).length
+    transportsByMonth.push({
+      label: d.toLocaleString('fr-FR', { month: 'short' }),
+      count,
+      isCurrentMonth: i === 0
+    })
+  }
+  const maxCount = Math.max(...transportsByMonth.map(m => m.count), 1)
+  transportsByMonth.forEach(m => { m.heightPct = Math.round((m.count / maxCount) * 100) })
+
+  // Conflits
+  const conflictList = loadConflicts()
+  const totalConflicts = conflictList.length
+  const resolvedConflicts = conflictList.filter(c => c.resolved).length
+  const openConflictsCount = totalConflicts - resolvedConflicts
+  const conflictResolutionRate = totalConflicts > 0 ? Math.round((resolvedConflicts / totalConflicts) * 100) : 100
+
+  const low = conflictList.filter(c => c.severity === 'low').length
+  const medium = conflictList.filter(c => c.severity === 'medium').length
+  const high = conflictList.filter(c => c.severity === 'high').length
+  const maxSev = Math.max(low, medium, high, 1)
+
+  return {
+    totalUsers, totalArticles, voitures, cartons, voituresPct,
+    totalTransports, transportsByMonth,
+    totalConflicts, resolvedConflicts, openConflicts: openConflictsCount,
+    conflictResolutionRate,
+    conflictCounts: { low, medium, high },
+    conflictBars: {
+      low: Math.round((low / maxSev) * 100),
+      medium: Math.round((medium / maxSev) * 100),
+      high: Math.round((high / maxSev) * 100)
+    }
+  }
+})
 
 // ---- Logout ----
 function handleLogout() {
@@ -1766,4 +2026,278 @@ function handleLogout() {
 }
 
 .modal textarea:focus { border-color: #3b82f6; }
+
+/* ===== PROGRESSION ===== */
+.prog-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.prog-kpi {
+  background: white;
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.prog-kpi-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.prog-kpi-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1;
+}
+
+.prog-kpi-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+  margin-top: 0.2rem;
+}
+
+.prog-kpi-sub {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.prog-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 700px) { .prog-row { grid-template-columns: 1fr; } }
+
+.prog-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+}
+
+.prog-card h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 1rem;
+}
+
+.prog-card--full {
+  margin-bottom: 1rem;
+}
+
+/* Donut */
+.prog-donut-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.prog-donut {
+  width: 90px;
+  height: 90px;
+  flex-shrink: 0;
+}
+
+.prog-donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Bars */
+.prog-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.prog-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.prog-bar-label {
+  width: 60px;
+  font-size: 0.8rem;
+  color: #64748b;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.prog-bar-track {
+  flex: 1;
+  background: #f1f5f9;
+  border-radius: 20px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.prog-bar-fill {
+  height: 100%;
+  border-radius: 20px;
+  transition: width 0.6s ease;
+  min-width: 4px;
+}
+
+.prog-bar-count {
+  width: 24px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #334155;
+  text-align: right;
+}
+
+.prog-conflict-summary {
+  display: flex;
+  gap: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.prog-mini-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.mini-val {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.mini-lbl {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+/* Bar chart */
+.prog-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 120px;
+  padding-bottom: 0.25rem;
+}
+
+.prog-chart-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+}
+
+.prog-chart-bar-wrap {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.prog-chart-bar {
+  width: 100%;
+  max-width: 32px;
+  border-radius: 6px 6px 0 0;
+  min-height: 4px;
+  transition: height 0.5s ease;
+}
+
+.prog-chart-label {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  text-transform: capitalize;
+}
+
+/* Methods grid */
+.prog-methods-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.prog-method {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.prog-method-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.2rem;
+}
+
+.prog-method-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.prog-method-desc {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.prog-method-metric {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.metric-val {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.metric-unit {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
 </style>
