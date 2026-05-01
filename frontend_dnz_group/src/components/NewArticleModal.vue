@@ -132,6 +132,31 @@
           <textarea id="description" v-model="form.description" rows="3" placeholder="Informations complémentaires..."></textarea>
         </div>
 
+        <!-- ===== Simulateur de prix ===== -->
+        <div v-if="form.type" class="price-sim">
+          <div class="price-sim-header">
+            <span class="price-sim-title">💰 Estimation du prix</span>
+            <span :class="['price-sim-badge', priceSimulation.precise ? 'badge-precise' : 'badge-estimate']">{{ priceSimulation.precise ? 'Précis' : 'Estimation' }}</span>
+          </div>
+
+          <div class="price-sim-breakdown">
+            <div v-for="line in priceSimulation.lines" :key="line.label" class="price-line">
+              <span class="price-line-label">{{ line.label }}</span>
+              <span class="price-line-amount" :class="{ 'amount-add': line.amount > 0, 'amount-base': line.isBase }">{{ line.amount >= 0 ? '+' : '' }}{{ line.amount }}€</span>
+            </div>
+          </div>
+
+          <div class="price-sim-total">
+            <span>Total estimé</span>
+            <span class="price-total-val">{{ priceSimulation.total }}€</span>
+          </div>
+
+          <div class="price-sim-bar-wrap">
+            <div class="price-sim-bar" :style="{ width: priceSimulation.fillPct + '%' }"></div>
+          </div>
+          <div class="price-sim-hint">{{ priceSimulation.hint }}</div>
+        </div>
+
         <button type="submit" class="btn-primary" :disabled="!form.type">
           Enregistrer l'article
         </button>
@@ -143,6 +168,17 @@
 <script setup>
 import { reactive, ref, computed } from 'vue'
 import { addArticle } from '../articles.js'
+
+// ---- Grilles tarifaires ----
+const MARQUES_PREMIUM = ['BMW', 'Mercedes', 'Audi', 'Tesla', 'Volvo', 'Jeep']
+const MARQUES_SEMI = ['Volkswagen', 'Ford', 'Seat', 'Skoda', 'Hyundai', 'Kia']
+const PRICE_VOITURE_BASE = 250
+const PRICE_VOITURE_PREMIUM = 150
+const PRICE_VOITURE_SEMI = 50
+const PRICE_CARTON_PER_LITRE = 0.08
+const PRICE_CARTON_MIN = 15
+const PRICE_KG_ABOVE_5 = 0.5
+const PRICE_EXTRA_ITEM = 2
 
 const emit = defineEmits(['close'])
 
@@ -262,6 +298,66 @@ function addContenu() {
 function removeContenu(i) {
   form.contenu.splice(i, 1)
 }
+
+// ---- Simulateur de prix ----
+const priceSimulation = computed(() => {
+  if (form.type === 'voiture') {
+    const lines = []
+    lines.push({ label: 'Base transport voiture', amount: PRICE_VOITURE_BASE, isBase: true })
+
+    let extra = 0
+    let hint = 'Remplissez la marque et le modèle pour affiner le prix.'
+    if (form.marque) {
+      if (MARQUES_PREMIUM.includes(form.marque)) {
+        extra = PRICE_VOITURE_PREMIUM
+        lines.push({ label: `Véhicule premium (${form.marque})`, amount: extra })
+        hint = 'Véhicule premium — manutention renforcée incluse.'
+      } else if (MARQUES_SEMI.includes(form.marque)) {
+        extra = PRICE_VOITURE_SEMI
+        lines.push({ label: `Véhicule semi-premium (${form.marque})`, amount: extra })
+        hint = 'Tarif ajusté pour votre marque.'
+      } else {
+        hint = 'Tarif standard appliqué.'
+      }
+    }
+    const total = PRICE_VOITURE_BASE + extra
+    const precise = !!(form.marque && form.modele && form.immatriculation)
+    return { lines, total, precise, hint, fillPct: Math.min(100, Math.round((total / 500) * 100)) }
+  }
+
+  if (form.type === 'carton') {
+    const lines = []
+    const h = Number(form.hauteur) || 0
+    const l = Number(form.longueur) || 0
+    const w = Number(form.largeur) || 0
+    const litres = (h * l * w) / 1000
+    const volumePrice = litres > 0 ? Math.max(PRICE_CARTON_MIN, Math.round(litres * PRICE_CARTON_PER_LITRE * 100) / 100) : PRICE_CARTON_MIN
+
+    lines.push({ label: litres > 0 ? `Volume ${Math.round(litres)}L (${h}×${l}×${w} cm)` : 'Base minimum carton', amount: volumePrice, isBase: true })
+
+    let poidsExtra = 0
+    const poids = Number(form.poids) || 0
+    if (poids > 5) {
+      poidsExtra = Math.round((poids - 5) * PRICE_KG_ABOVE_5 * 100) / 100
+      lines.push({ label: `Surpoids (${poids}kg — au‑delà de 5kg)`, amount: poidsExtra })
+    }
+
+    let contenuExtra = 0
+    if (form.contenu.length > 3) {
+      contenuExtra = (form.contenu.length - 3) * PRICE_EXTRA_ITEM
+      lines.push({ label: `Contenu varié (${form.contenu.length} types d'articles)`, amount: contenuExtra })
+    }
+
+    const total = Math.round((volumePrice + poidsExtra + contenuExtra) * 100) / 100
+    const precise = !!(h && l && w)
+    const hint = precise
+      ? (poids ? 'Prix basé sur le volume et le poids.' : 'Ajoutez le poids pour affiner.')
+      : 'Remplissez les dimensions pour calculer le volume.'
+    return { lines, total, precise, hint, fillPct: Math.min(100, Math.round((total / 200) * 100)) }
+  }
+
+  return { lines: [], total: 0, precise: false, hint: '', fillPct: 0 }
+})
 
 function handleSubmit() {
   const article = { type: form.type, description: form.description }
@@ -531,5 +627,119 @@ input:focus, textarea:focus {
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ===== Simulateur de prix ===== */
+.price-sim {
+  background: linear-gradient(135deg, #f0fdf4, #eff6ff);
+  border: 1.5px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 1rem 1.1rem 0.8rem;
+  margin-bottom: 1.2rem;
+}
+
+.price-sim-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.price-sim-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+
+.price-sim-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 20px;
+  padding: 2px 9px;
+  letter-spacing: 0.02em;
+}
+
+.badge-precise {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-estimate {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.price-sim-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+}
+
+.price-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.83rem;
+  color: #475569;
+}
+
+.price-line-label {
+  flex: 1;
+}
+
+.price-line-amount {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.amount-base {
+  color: #334155;
+}
+
+.amount-add {
+  color: #2563eb;
+}
+
+.price-sim-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px dashed #a7f3d0;
+  padding-top: 0.6rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.price-total-val {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #16a34a;
+}
+
+.price-sim-bar-wrap {
+  background: #d1fae5;
+  border-radius: 20px;
+  height: 6px;
+  overflow: hidden;
+  margin-bottom: 0.45rem;
+}
+
+.price-sim-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  border-radius: 20px;
+  transition: width 0.5s ease;
+  min-width: 4px;
+}
+
+.price-sim-hint {
+  font-size: 0.76rem;
+  color: #64748b;
+  font-style: italic;
 }
 </style>
