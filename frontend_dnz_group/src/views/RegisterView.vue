@@ -236,4 +236,10 @@ input:focus {
   font-size: 0.9rem;
   margin-bottom: 1rem;
 }
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 1.75rem 1.25rem;
+  }
+}
 </style>

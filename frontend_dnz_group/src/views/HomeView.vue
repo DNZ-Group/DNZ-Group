@@ -1,5 +1,4 @@
 <template>
-  <AppHeader />
   <main class="home-main">
     <h1>Bienvenue chez DNZ-Group</h1>
 
@@ -61,7 +60,6 @@
 
 <script setup>
 import { ref, watch, onMounted } from 'vue'
-import AppHeader from '../components/AppHeader.vue'
 import NewArticleModal from '../components/NewArticleModal.vue'
 import { currentUser } from '../auth.js'
 import { articles, refreshArticles, deleteArticle } from '../articles.js'
@@ -82,7 +80,7 @@ async function handleDelete(id) {
 .home-main {
   max-width: 900px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 0;
   font-family: sans-serif;
   color: #2c3e50;
 }
@@ -92,11 +90,17 @@ h1 {
   margin-bottom: 2rem;
 }
 
+@media (max-width: 640px) {
+  h1 { font-size: 1.5rem; margin-bottom: 1.25rem; }
+}
+
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 h2 {
@@ -221,5 +225,20 @@ h2 {
   color: #42b883;
   font-weight: bold;
   text-decoration: none;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .article-card {
+    padding: 1rem;
+    flex-wrap: wrap;
+  }
+  .article-icon {
+    font-size: 1.5rem;
+  }
+  .btn-new-article {
+    width: 100%;
+    text-align: center;
+  }
 }
 </style>

@@ -1,3 +1,10 @@
 <template>
-  <router-view />
+  <DefaultLayout v-if="$route.meta.layout === 'default'">
+    <router-view />
+  </DefaultLayout>
+  <router-view v-else />
 </template>
+
+<script setup>
+import DefaultLayout from './layouts/DefaultLayout.vue'
+</script>

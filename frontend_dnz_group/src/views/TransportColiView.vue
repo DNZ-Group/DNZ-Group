@@ -118,4 +118,11 @@
 .btn-cta:hover {
   background: #ca6f1e;
 }
+
+@media (max-width: 640px) {
+  .hero h1 { font-size: 1.8rem; }
+  .hero { padding: 50px 1rem; }
+  .features { padding: 2rem 1rem; }
+  .cta { padding: 2rem 1rem; }
+}
 </style>

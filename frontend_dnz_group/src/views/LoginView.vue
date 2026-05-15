@@ -168,4 +168,10 @@ input:focus {
 .switch-auth a:hover {
   text-decoration: underline;
 }
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 1.75rem 1.25rem;
+  }
+}
 </style>
