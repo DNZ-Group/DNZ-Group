@@ -35,6 +35,27 @@
       <button class="sidebar-logout" @click="handleLogout">⬅ Déconnexion</button>
     </aside>
 
+    <!-- Mobile topbar (dropdown nav) -->
+    <div class="mobile-topbar">
+      <div class="mobile-topbar-brand">
+        <span class="mobile-logo">DNZ-Group</span>
+        <span class="mobile-role">Admin</span>
+      </div>
+      <div class="mobile-topbar-controls">
+        <select class="mobile-nav-select" :value="tab" @change="onMobileTabChange">
+          <option value="stats">📊 Statistiques</option>
+          <option value="users">👥 Utilisateurs</option>
+          <option value="articles">📦 Articles</option>
+          <option value="email">✉️ Messagerie{{ inboxUnread > 0 ? ` (${inboxUnread})` : '' }}</option>
+          <option value="calendar">📅 Calendrier</option>
+          <option value="conflicts">⚠️ Conflits{{ openConflicts > 0 ? ` (${openConflicts})` : '' }}</option>
+          <option value="progress">📈 Progression</option>
+          <option value="suivi">🚢 Suivi conteneur</option>
+        </select>
+        <button class="mobile-logout-btn" @click="handleLogout" title="Déconnexion">⬅</button>
+      </div>
+    </div>
+
     <!-- Main content -->
     <main class="admin-main">
       <!-- Header -->
@@ -1242,6 +1263,15 @@ function openEmailTab() {
   if (inbox.value.length === 0) loadInbox()
 }
 
+function onMobileTabChange(e) {
+  const val = e.target.value
+  if (val === 'email') {
+    openEmailTab()
+  } else {
+    tab.value = val
+  }
+}
+
 async function handleSendEmail() {
   sendLoading.value = true
   sendSuccess.value = false
@@ -1744,6 +1774,107 @@ function handleLogout() {
   min-height: 100vh;
   background: #f0f4f8;
   font-family: 'Segoe UI', sans-serif;
+}
+
+/* Mobile topbar */
+.mobile-topbar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .admin-layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #1e293b;
+    padding: 0.75rem 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    gap: 0.75rem;
+  }
+
+  .mobile-topbar-brand {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+  }
+
+  .mobile-logo {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #38bdf8;
+  }
+
+  .mobile-role {
+    font-size: 0.7rem;
+    color: #94a3b8;
+  }
+
+  .mobile-topbar-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  .mobile-nav-select {
+    background: #334155;
+    color: white;
+    border: 1px solid #475569;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    flex: 1;
+    max-width: 220px;
+    outline: none;
+  }
+
+  .mobile-nav-select:focus {
+    border-color: #38bdf8;
+  }
+
+  .mobile-logout-btn {
+    background: transparent;
+    border: 1px solid #475569;
+    color: #94a3b8;
+    padding: 0.5rem 0.65rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.2s, color 0.2s;
+    white-space: nowrap;
+  }
+
+  .mobile-logout-btn:hover {
+    background: #334155;
+    color: white;
+  }
+
+  .admin-main {
+    padding: 1rem;
+  }
+
+  .admin-topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.25rem;
+  }
 }
 
 /* Sidebar */
