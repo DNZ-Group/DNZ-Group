@@ -11,7 +11,7 @@
           <ul v-show="servicesOpen" class="dropdown-menu" @click.stop>
             <li>
               <router-link to="/services/transport-voiture" @click="servicesOpen = false">
-                🚗 Transport Voitures erfte
+                🚗 Transport Voitures
               </router-link>
             </li>
             <li>
