@@ -1,6 +1,6 @@
 <template>
   <header class="main-header">
-    <div class="logo">DNZ-Group</div>
+    <div class="logo">DNZ-Groupe</div>
     <nav>
       <ul>
         <li
