@@ -1093,24 +1093,24 @@ const tabTitle = computed(() => {
 const allUsers = ref([])
 const allArticles = ref([])
 
-function loadUsers() {
-  allUsers.value = getAllUsers()
+async function loadUsers() {
+  allUsers.value = await getAllUsers()
 }
 
-function loadArticles() {
-  const articles = []
-  const users = getAllUsers()
-  users.forEach(u => {
-    const key = `dnz_articles_${u.email}`
-    const userArticles = JSON.parse(localStorage.getItem(key) || '[]')
-    userArticles.forEach(a => articles.push({ ...a, userName: u.name }))
-  })
-  allArticles.value = articles
+async function loadArticles() {
+  const token = localStorage.getItem('dnz_token')
+  if (!token) return
+  try {
+    const res = await fetch(`${API}/api/admin/articles`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    if (res.ok) allArticles.value = await res.json()
+  } catch { /* ignore */ }
 }
 
-onMounted(() => {
-  loadUsers()
-  loadArticles()
+onMounted(async () => {
+  await loadUsers()
+  await loadArticles()
 })
 
 // ---- Stats ----
@@ -1121,7 +1121,7 @@ const stats = computed(() => ({
   cartons: allArticles.value.filter(a => a.type === 'carton').length
 }))
 
-const recentUsers = computed(() => allUsers.value.slice(-5).reverse())
+const recentUsers = computed(() => allUsers.value.slice(0, 5))
 
 // ---- Create user ----
 const showUserModal = ref(false)
@@ -1136,16 +1136,16 @@ function closeUserModal() {
   newUser.value = { name: '', email: '', phone: '', password: '', role: 'user' }
 }
 
-function handleCreateUser() {
+async function handleCreateUser() {
   userModalError.value = ''
   userModalSuccess.value = false
-  const ok = createUser({ ...newUser.value })
+  const ok = await createUser({ ...newUser.value })
   if (!ok) {
     userModalError.value = 'Cet e-mail est déjà utilisé.'
     return
   }
   userModalSuccess.value = true
-  loadUsers()
+  await loadUsers()
   setTimeout(closeUserModal, 1200)
 }
 
@@ -1166,19 +1166,18 @@ function confirmDeleteArticle(a) {
   confirmMessage.value = `Supprimer l'article « ${a.label || a.type} » de ${a.userName} ?`
 }
 
-function executeDelete() {
+async function executeDelete() {
   if (confirmType.value === 'user') {
-    deleteUser(confirmTarget.value.email)
-    loadUsers()
-    loadArticles()
+    await deleteUser(confirmTarget.value.id)
+    await loadUsers()
+    await loadArticles()
   } else {
-    const email = allUsers.value.find(u => u.name === confirmTarget.value.userName)?.email
-    if (email) {
-      const key = `dnz_articles_${email}`
-      const articles = JSON.parse(localStorage.getItem(key) || '[]')
-      localStorage.setItem(key, JSON.stringify(articles.filter(a => a.id !== confirmTarget.value.id)))
-      loadArticles()
-    }
+    const token = localStorage.getItem('dnz_token')
+    await fetch(`${API}/api/admin/articles/${confirmTarget.value.id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    await loadArticles()
   }
   confirmTarget.value = null
 }
@@ -1474,16 +1473,11 @@ function deleteConflict(id) {
 
 // ---- Progression ----
 const prog = computed(() => {
-  const users = getAllUsers().filter(u => u.role !== 'admin')
+  const users = allUsers.value.filter(u => u.role !== 'admin')
   const totalUsers = users.length
 
-  // Articles
-  const allArts = []
-  users.forEach(u => {
-    const key = `dnz_articles_${u.email}`
-    const arts = JSON.parse(localStorage.getItem(key) || '[]')
-    allArts.push(...arts)
-  })
+  // Articles depuis l'API
+  const allArts = allArticles.value
   const totalArticles = allArts.length
   const voitures = allArts.filter(a => a.type === 'voiture').length
   const cartons = allArts.filter(a => a.type === 'carton').length

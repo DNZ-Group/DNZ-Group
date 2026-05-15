@@ -1,40 +1,47 @@
 import { ref } from 'vue'
-import { currentUser } from './auth.js'
+import { getToken } from './auth.js'
 
-function getStorageKey() {
-  return currentUser.value ? `dnz_articles_${currentUser.value.email}` : null
-}
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
-function loadArticles() {
-  const key = getStorageKey()
-  if (!key) return []
-  return JSON.parse(localStorage.getItem(key) || '[]')
-}
-
-export const articles = ref(loadArticles())
-
-export function refreshArticles() {
-  articles.value = loadArticles()
-}
-
-export function addArticle(article) {
-  const key = getStorageKey()
-  if (!key) return
-  const list = loadArticles()
-  const newArticle = {
-    ...article,
-    id: Date.now(),
-    createdAt: new Date().toLocaleDateString('fr-FR')
+function authHeaders() {
+  const token = getToken()
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   }
-  list.push(newArticle)
-  localStorage.setItem(key, JSON.stringify(list))
-  articles.value = list
 }
 
-export function deleteArticle(id) {
-  const key = getStorageKey()
-  if (!key) return
-  const list = loadArticles().filter(a => a.id !== id)
-  localStorage.setItem(key, JSON.stringify(list))
-  articles.value = list
+export const articles = ref([])
+
+export async function refreshArticles() {
+  const token = getToken()
+  if (!token) { articles.value = []; return }
+  try {
+    const res = await fetch(`${API}/api/articles`, { headers: authHeaders() })
+    if (res.ok) articles.value = await res.json()
+  } catch {
+    articles.value = []
+  }
 }
+
+export async function addArticle(article) {
+  try {
+    const res = await fetch(`${API}/api/articles`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(article)
+    })
+    if (res.ok) await refreshArticles()
+  } catch { /* ignore */ }
+}
+
+export async function deleteArticle(id) {
+  try {
+    const res = await fetch(`${API}/api/articles/${id}`, {
+      method: 'DELETE',
+      headers: authHeaders()
+    })
+    if (res.ok) articles.value = articles.value.filter(a => a.id !== id)
+  } catch { /* ignore */ }
+}
+

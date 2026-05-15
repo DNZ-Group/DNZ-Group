@@ -60,7 +60,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import AppHeader from '../components/AppHeader.vue'
 import NewArticleModal from '../components/NewArticleModal.vue'
 import { currentUser } from '../auth.js'
@@ -68,11 +68,13 @@ import { articles, refreshArticles, deleteArticle } from '../articles.js'
 
 const showModal = ref(false)
 
+onMounted(() => refreshArticles())
+
 // Recharger les articles si l'utilisateur change (connexion/déconnexion)
 watch(currentUser, () => refreshArticles())
 
-function handleDelete(id) {
-  if (confirm('Supprimer cet article ?')) deleteArticle(id)
+async function handleDelete(id) {
+  if (confirm('Supprimer cet article ?')) await deleteArticle(id)
 }
 </script>
 

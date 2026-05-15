@@ -359,7 +359,7 @@ const priceSimulation = computed(() => {
   return { lines: [], total: 0, precise: false, hint: '', fillPct: 0 }
 })
 
-function handleSubmit() {
+async function handleSubmit() {
   const article = { type: form.type, description: form.description }
 
   if (form.type === 'voiture') {
@@ -376,7 +376,7 @@ function handleSubmit() {
     article.label = `📦 Carton ${form.hauteur}×${form.longueur}×${form.largeur} cm`
   }
 
-  addArticle(article)
+  await addArticle(article)
   emit('close')
 }
 </script>

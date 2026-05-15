@@ -53,9 +53,9 @@ const form = reactive({
   password: ''
 })
 
-function handleLogin() {
+async function handleLogin() {
   error.value = false
-  const ok = login(form.email, form.password)
+  const ok = await login(form.email, form.password)
   if (ok) {
     router.push('/')
   } else {

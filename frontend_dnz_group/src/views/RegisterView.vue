@@ -106,19 +106,18 @@ const form = reactive({
   confirm: ''
 })
 
-function handleRegister() {
+async function handleRegister() {
   if (form.password !== form.confirm) return
-  const ok = register({
+  const result = await register({
     name: form.name,
     email: form.email,
     phone: form.phone,
-    city: form.city,
     password: form.password
   })
-  if (ok) {
+  if (result.success) {
     router.push('/')
   } else {
-    error.value = 'Un compte avec cet e-mail existe déjà.'
+    error.value = result.message || 'Un compte avec cet e-mail existe déjà.'
   }
 }
 </script>
