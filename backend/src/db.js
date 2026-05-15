@@ -14,6 +14,7 @@ function readData(name) {
 }
 
 function writeData(name, data) {
+  fs.mkdirSync(DATA_DIR, { recursive: true })
   const file = getFilePath(name)
   fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf-8')
 }
