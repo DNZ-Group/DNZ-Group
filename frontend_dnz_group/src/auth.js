@@ -77,7 +77,7 @@ export function login(email, password) {
 
   // Pour les admins, récupérer un vrai JWT depuis le backend (pour les routes API admin)
   if (safeUser.role === 'admin') {
-    fetch('http://localhost:3000/api/auth/login', {
+    fetch((import.meta.env.VITE_API_URL || 'http://localhost:3000') + '/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
