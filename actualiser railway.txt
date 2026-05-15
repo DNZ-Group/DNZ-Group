@@ -1,0 +1,48 @@
+const sha = "c97bbb155b18384ac41ed211d8862c8fccc9b398"
+const envId = "9305f881-0430-4917-b097-27444eebbb2b"
+const results = await page.evaluate(async ({ sha, envId }) => {
+const call = (serviceId) => fetch('https://backboard.railway.com/graphql/v2', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+credentials: 'include',
+body: JSON.stringify({ query: mutation { serviceInstanceDeployV2(environmentId: "${envId}", serviceId: "${serviceId}", commitSha: "${sha}") } })
+}).then(r => r.json())
+const [frontend, backend] = await Promise.all([
+call("42c81b9e-fcb6-4cd8-92a1-b74e88a1ce7e"),
+call("2521ec64-c9ef-4a64-8d50-094cbcd8a9e4")
+])
+return { frontend, backend }
+}, { sha, envId })
+return JSON.stringify(results) Ran terminal command:  git rev-parse HEAD
+
+Le SHA a changé, il y a un nouveau commit. Je lance le déploiement avec ce SHA : 
+
+
+
+Ran Playwright code
+Completed with input: const sha = "a14ccc240a90252f16cebcd1f1b7a3c9c118ec89"
+const envId = "9305f881-0430-4917-b097-27444eebbb2b"
+
+const results = await page.evaluate(async ({ sha, envId }) => {
+  const call = (serviceId) => fetch('https://backboard.railway.com/graphql/v2', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ query: `mutation { serviceInstanceDeployV2(environmentId: "${envId}", serviceId: "${serviceId}", commitSha: "${sha}") }` })
+  }).then(r => r.json())
+
+  const [frontend, backend] = await Promise.all([
+    call("42c81b9e-fcb6-4cd8-92a1-b74e88a1ce7e"),
+    call("2521ec64-c9ef-4a64-8d50-094cbcd8a9e4")
+  ])
+  return { frontend, backend }
+}, { sha, envId })
+
+return JSON.stringify(results)
+
+Les deux services sont en cours de déploiement avec le nouveau commit `a14ccc2` :
+
+- **Frontend** → `8461dbda` — Initializing ✅
+- **Backend** → `e1dd0205` — Initializing ✅
+
+Oui, cette méthode GraphQL permet bien de déclencher un nouveau déploiement à la demande sur Railway. À chaque nouveau commit, tu peux l'utiliser pour forcer le redéploiement. // je peux l utiliser pour actualiser railway
