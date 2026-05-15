@@ -11,12 +11,12 @@
           <ul v-show="servicesOpen" class="dropdown-menu" @click.stop>
             <li>
               <router-link to="/services/transport-voiture" @click="servicesOpen = false">
-                🚗 Transport Voitures restre
+                🚗 Transport Voitures 
               </router-link>
             </li>
             <li>
               <router-link to="/services/transport-coli" @click="servicesOpen = false">
-                📦 Transport Colis reste
+                📦 Transport Colis 
               </router-link>
             </li>
           </ul>
