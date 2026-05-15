@@ -1,22 +1,42 @@
-const fs = require('fs')
-const path = require('path')
+const { Pool } = require('pg')
 
-const DATA_DIR = path.join(__dirname, 'data')
+const isInternal = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('.railway.internal')
 
-function getFilePath(name) {
-  return path.join(DATA_DIR, `${name}.json`)
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: isInternal ? false : { rejectUnauthorized: false }
+})
+
+async function initDB() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id UUID PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      phone TEXT DEFAULT '',
+      password TEXT NOT NULL,
+      role TEXT DEFAULT 'user',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS articles (
+      id UUID PRIMARY KEY,
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL CHECK (type IN ('voiture', 'carton')),
+      label TEXT,
+      description TEXT DEFAULT '',
+      created_at TEXT,
+      marque TEXT,
+      modele TEXT,
+      immatriculation TEXT,
+      hauteur TEXT,
+      longueur TEXT,
+      largeur TEXT,
+      poids TEXT,
+      contenu JSONB DEFAULT '[]'::jsonb
+    )
+  `)
 }
 
-function readData(name) {
-  const file = getFilePath(name)
-  if (!fs.existsSync(file)) return []
-  return JSON.parse(fs.readFileSync(file, 'utf-8'))
-}
-
-function writeData(name, data) {
-  fs.mkdirSync(DATA_DIR, { recursive: true })
-  const file = getFilePath(name)
-  fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf-8')
-}
-
-module.exports = { readData, writeData }
+module.exports = { pool, initDB }
