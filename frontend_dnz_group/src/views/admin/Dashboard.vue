@@ -51,8 +51,8 @@
           <option value="conflicts">⚠️ Conflits{{ openConflicts > 0 ? ` (${openConflicts})` : '' }}</option>
           <option value="progress">📈 Progression</option>
           <option value="suivi">🚢 Suivi conteneur</option>
+          <option value="__logout__" style="color:#f87171">⬅ Déconnexion</option>
         </select>
-        <button class="mobile-logout-btn" @click="handleLogout" title="Déconnexion">⬅</button>
       </div>
     </div>
 
@@ -1265,7 +1265,9 @@ function openEmailTab() {
 
 function onMobileTabChange(e) {
   const val = e.target.value
-  if (val === 'email') {
+  if (val === '__logout__') {
+    handleLogout()
+  } else if (val === 'email') {
     openEmailTab()
   } else {
     tab.value = val
@@ -1844,32 +1846,12 @@ function handleLogout() {
     border-color: #38bdf8;
   }
 
-  .mobile-logout-btn {
-    background: transparent;
-    border: 1px solid #475569;
-    color: #94a3b8;
-    padding: 0.5rem 0.65rem;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: background 0.2s, color 0.2s;
-    white-space: nowrap;
-  }
-
-  .mobile-logout-btn:hover {
-    background: #334155;
-    color: white;
-  }
-
   .admin-main {
     padding: 1rem;
   }
 
   .admin-topbar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
+    display: none;
   }
 
   .page-title {
