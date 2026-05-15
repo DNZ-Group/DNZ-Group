@@ -1,6 +1,6 @@
 <template>
   <header class="main-header">
-    <div class="logo">DNZ-Groupe</div>
+    <div class="logo">DNZ-Group</div>
     <nav>
       <ul>
         <li
@@ -11,12 +11,12 @@
           <ul v-show="servicesOpen" class="dropdown-menu" @click.stop>
             <li>
               <router-link to="/services/transport-voiture" @click="servicesOpen = false">
-                🚗 Transport Voitures1fghtfdh
+                🚗 Transport Voitures restre
               </router-link>
             </li>
             <li>
               <router-link to="/services/transport-coli" @click="servicesOpen = false">
-                📦 Transport Colishlkö
+                📦 Transport Colis reste
               </router-link>
             </li>
           </ul>
