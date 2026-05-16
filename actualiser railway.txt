@@ -1,3 +1,5 @@
+utiliser git rev-parse HEAD pour actualiser sha.
+
 const sha = "c97bbb155b18384ac41ed211d8862c8fccc9b398"
 const envId = "9305f881-0430-4917-b097-27444eebbb2b"
 const results = await page.evaluate(async ({ sha, envId }) => {
