@@ -323,5 +323,9 @@ nav ul {
   .nav-contact {
     color: #2c3e50;
   }
+
+  .btn-register {
+    width: fit-content;
+  }
 }
 </style>
