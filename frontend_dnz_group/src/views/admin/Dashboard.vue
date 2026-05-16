@@ -262,6 +262,11 @@ function handleLogout() {
   height: 100vh;
 }
 
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .mobile-topbar { display: flex; }
+}
+
 .sidebar-logo {
   font-size: 1.4rem;
   font-weight: 700;
